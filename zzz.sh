@@ -414,7 +414,7 @@ function add_to_cron(){
   crontab -l | grep -v $startup_script_path >> $cron_script_path;
 
   crontab $cron_script_path;
-  systemctl restart cron;
+  sudo systemctl restart cron;
 
   if crontab -l | grep -q $startup_script_path; then 
     echo "Proxy startup script added to cron autorun successfully";
@@ -427,7 +427,7 @@ function remove_from_cron(){
   # Delete all occurencies of proxy script in crontab
   crontab -l | grep -v $startup_script_path > $cron_script_path;
   crontab $cron_script_path;
-  systemctl restart cron;
+  sudo systemctl restart cron;
 
   if crontab -l | grep -q $startup_script_path; then
     log_err "Warning: cannot delete proxy script from crontab";
