@@ -172,7 +172,7 @@ ndppd_routing_file="$proxy_dir/ndppd.routed"
 # Path to file with proxy random usernames/password
 random_users_list_file="$proxy_dir/random_users.list"
 # Define correct path to file with backconnect proxies list, if it isn't defined by user
-if [[ $backconnect_proxies_file == "default" ]]; then backconnect_proxies_file="$proxy_dir/backconnect_proxies.list"; fi;
+if [[ $backconnect_proxies_file == "default" ]]; then backconnect_proxies_file="/backconnect_proxies.list"; fi;
 # Script on server startup (generate random ids and run proxy daemon)
 startup_script_path="$proxy_dir/proxy-startup.sh"
 # Last opened port for backconnect proxy
