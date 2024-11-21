@@ -17,7 +17,7 @@ function usage() { echo "Usage: $0 [-s | --subnet <16|32|48|64|80|96|112> proxy 
                           [--start-port <5000-65536> cổng bắt đầu cho kết nối ngược ipv4 (default 30000)]
                           [-l | --localhost <bool> chỉ cho phép kết nối cho localhost (backconnect on 127.0.0.1)]
                           [-f | --backconnect-proxies-file <string> đường dẫn đến tệp, trong đó danh sách proxy backconnect sẽ được ghi
-				khi proxy bắt đầu hoạt động (default \`~/proxyserver/backconnect_proxies.list\`)]                                                     
+				khi proxy bắt đầu hoạt động (default \`~/backconnect_proxies.list\`)]                                                     
                           [-m | --ipv6-mask <string> mặt nạ địa chỉ ipv6 hằng số, trong đó phần được xoay vòng được thêm vào (or gateaway)
                                chỉ sử dụng nếu cổng khác với địa chỉ mạng con]
                           [-i | --interface <string> tên đầy đủ của giao diện ethernet, trên đó mạng con IPv6 được phân bổ
@@ -172,7 +172,7 @@ ndppd_routing_file="$proxy_dir/ndppd.routed"
 # Path to file with proxy random usernames/password
 random_users_list_file="$proxy_dir/random_users.list"
 # Define correct path to file with backconnect proxies list, if it isn't defined by user
-if [[ $backconnect_proxies_file == "default" ]]; then backconnect_proxies_file="$proxy_dir/backconnect_proxies.list"; fi;
+if [[ $backconnect_proxies_file == "default" ]]; then backconnect_proxies_file="/backconnect_proxies.list"; fi;
 # Script on server startup (generate random ids and run proxy daemon)
 startup_script_path="$proxy_dir/proxy-startup.sh"
 # Cron config path (start proxy server after linux reboot and IPs rotations)
