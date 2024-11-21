@@ -155,10 +155,10 @@ function check_startup_parameters(){
 }
 
 # Define all needed paths to scripts / configs / etc
-bash_location="$(command -v bash)"
+bash_location="$(which bash)"
 # Get user home dir absolute path
 cd ~
-user_home_dir="$pwd"
+user_home_dir="$(realpath .)"
 # Path to dir with all proxies info
 proxy_dir="$user_home_dir/proxyserver"
 # Path to file with config for backconnect proxy server
