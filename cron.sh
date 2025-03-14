@@ -172,9 +172,11 @@ ndppd_routing_file="$proxy_dir/ndppd.routed"
 # Path to file with proxy random usernames/password
 random_users_list_file="$proxy_dir/random_users.list"
 # Define correct path to file with backconnect proxies list, if it isn't defined by user
-if [[ $backconnect_proxies_file == "default" ]]; then backconnect_proxies_file="/backconnect_proxies.list"; fi;
+if [[ $backconnect_proxies_file == "default" ]]; then backconnect_proxies_file="$proxy_dir/backconnect_proxies.list"; fi;
 # Script on server startup (generate random ids and run proxy daemon)
 startup_script_path="$proxy_dir/proxy-startup.sh"
+# Cron config path (start proxy server after linux reboot and IPs rotations)
+cron_script_path="$proxy_dir/proxy-server.cron"
 # Last opened port for backconnect proxy
 last_port=$(($start_port + $proxy_count - 1));
 # Proxy credentials - username and password, delimited by ':', if exist, or empty string, if auth == false
@@ -330,7 +332,7 @@ function check_ipv6(){
 function install_requred_packages(){
   apt update &>> $script_log_file;
 
-  requred_packages=("make" "g++" "wget" "curl" "ndppd" "procps");
+  requred_packages=("make" "g++" "wget" "curl" "cron" "ndppd" "procps");
   for package in ${requred_packages[@]}; do install_package $package; done;
 
   echo -e "\nAll required packages installed successfully";
@@ -342,9 +344,9 @@ function install_3proxy(){
 
   echo -e "\nDownloading proxy server source...";
   ( # Install proxy server
-  wget https://github.com/microsoft10/zzz/raw/refs/heads/main/zzz.tar.gz &> /dev/null
-  tar -xf zzz.tar.gz
-  rm zzz.tar.gz
+  wget https://github.com/3proxy/3proxy/archive/refs/tags/0.9.4.tar.gz &> /dev/null
+  tar -xf 0.9.4.tar.gz
+  rm 0.9.4.tar.gz
   mv 3proxy-0.9.4 3proxy) &>> $script_log_file
   echo "Proxy server source code downloaded successfully";
 
@@ -398,6 +400,40 @@ EOF
   service ndppd restart;
 
   systemctl is-active --quiet ndppd | echo "ndppd is up and running";
+}
+
+function add_to_cron(){
+  delete_file_if_exists $cron_script_path;
+
+  # Add startup script to cron (job sheduler) to restart proxy server after reboot and rotate proxy pool
+  echo "@reboot $bash_location $startup_script_path" > $cron_script_path;
+  if [ $rotating_interval -ne 0 ]; then echo "*/$rotating_interval * * * * $bash_location $startup_script_path" >> "$cron_script_path"; fi;
+
+  # Add existing cron rules (not related to this proxy server) to cron script, so that they are not removed
+  # https://unix.stackexchange.com/questions/21297/how-do-i-add-an-entry-to-my-crontab
+  crontab -l | grep -v $startup_script_path >> $cron_script_path;
+
+  crontab $cron_script_path;
+  systemctl restart cron;
+
+  if crontab -l | grep -q $startup_script_path; then 
+    echo "Proxy startup script added to cron autorun successfully";
+  else
+    log_err "Warning: adding script to cron autorun failed.";
+  fi;
+}
+
+function remove_from_cron(){
+  # Delete all occurencies of proxy script in crontab
+  crontab -l | grep -v $startup_script_path > $cron_script_path;
+  crontab $cron_script_path;
+  systemctl restart cron;
+
+  if crontab -l | grep -q $startup_script_path; then
+    log_err "Warning: cannot delete proxy script from crontab";
+  else
+    echo "Proxy script deleted from crontab successfully";
+  fi;
 }
 
 function generate_random_users_if_needed(){
@@ -457,11 +493,22 @@ function create_startup_script(){
   # Array with allowed symbols in hex (in ipv6 addresses)
   array=( 1 2 3 4 5 6 7 8 9 0 a b c d e f )
 
+  # Truncate subnet - remove last symbols of block, if subnet isn't divisible by 16
+  function get_truncated_subnet_mask () {
+    # Divide by 4 to get number of redundant symbols in block (one symbol, 0-f, 2^4)
+    redundant_symbols_count=$(( ($subnet % 16) / 4 ))
+    last_subnet_block=$(echo $subnet_mask | awk -F ':' '{print $NF}')
+    symbols_count=\${#last_subnet_block}
+    trunc_symbols_count=\$(( \$redundant_symbols_count - (4 - \$symbols_count) ))
+    mask=$subnet_mask
+    echo \${mask::${#subnet_mask}-\$trunc_symbols_count}
+  }
+
   # Generate random hex symbol
   function rh () { echo \${array[\$RANDOM%16]}; }
 
   rnd_subnet_ip () {
-    echo -n $subnet_mask;
+    echo -n \$(get_truncated_subnet_mask);
     symbol=$subnet
     while (( \$symbol < 128)); do
       if ((\$symbol % 16 == 0)); then echo -n :; fi;
@@ -674,6 +721,7 @@ fi;
 if $uninstall; then
   if ! is_proxyserver_installed; then log_err_and_exit "Proxy server is not installed"; fi;
   
+  remove_from_cron;
   kill_3proxy;
   remove_ipv6_addresses_from_iface;
   close_ufw_backconnect_ports;
@@ -699,6 +747,7 @@ else
 fi;
 generate_random_users_if_needed;
 create_startup_script;
+add_to_cron;
 open_ufw_backconnect_ports;
 run_proxy_server;
 write_backconnect_proxies_to_file;
